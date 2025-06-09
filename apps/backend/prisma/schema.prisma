@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core models
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?
+  firstName     String
+  lastName      String
+  role          UserRole  @default(TENANT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  organization  Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+  properties    Property[]
+  tickets       Ticket[]
+  notifications Notification[]
+  preferences   Json?     // User preferences stored as JSONB
+}
+
+model Organization {
+  id          String    @id @default(cuid())
+  name        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  users       User[]
+  properties  Property[]
+  settings    Json?     // Organization settings stored as JSONB
+}
+
+model Property {
+  id            String    @id @default(cuid())
+  name          String
+  address       String
+  type          PropertyType
+  status        PropertyStatus @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  organization  Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  manager       User?     @relation(fields: [managerId], references: [id])
+  managerId     String?
+  units         Unit[]
+  tickets       Ticket[]
+}
+
+model Unit {
+  id          String    @id @default(cuid())
+  number      String
+  type        UnitType
+  status      UnitStatus @default(VACANT)
+  rent        Float
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  property    Property  @relation(fields: [propertyId], references: [id])
+  propertyId  String
+  tenant      User?     @relation(fields: [tenantId], references: [id])
+  tenantId    String?
+  tickets     Ticket[]
+}
+
+model Ticket {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  status      TicketStatus @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  property    Property  @relation(fields: [propertyId], references: [id])
+  propertyId  String
+  unit        Unit?     @relation(fields: [unitId], references: [id])
+  unitId      String?
+  reporter    User      @relation(fields: [reporterId], references: [id])
+  reporterId  String
+  aiAnalysis  Json?     // AI analysis results stored as JSONB
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  type        NotificationType
+  title       String
+  message     String
+  read        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  metadata    Json?     // Additional notification data stored as JSONB
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  MANAGER
+  TENANT
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  MIXED_USE
+}
+
+enum PropertyStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum UnitType {
+  STUDIO
+  ONE_BEDROOM
+  TWO_BEDROOM
+  THREE_BEDROOM
+  OFFICE
+  RETAIL
+}
+
+enum UnitStatus {
+  VACANT
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  TICKET
+  PAYMENT
+  MAINTENANCE
+  SYSTEM
+} 
